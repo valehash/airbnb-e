@@ -10,16 +10,18 @@ class FileStorage:
         return FileStorage.__objects
     
     def new(self, obj):
-        cn = obj.__class__.__name__
-        id =  obj.id
-        key = f"{cn}.{id}"
+        key = f"{obj.__class__.__name__}.{obj.id}"
         FileStorage.__objects[key] = obj
 
     def save(self):
         new_dict = {}
-        for key, value in FileStorage.__objects.items():
-            print(f"value = {value}")
-            print(f"type(value) = {type(value)}")
+        # for key, value in FileStorage.__objects.items():
+        # Do NOT trust the key in FileStorage.__objects.keys()
+        # Hence the reason for changing the logic in the
+        # above for loop to the one below.
+        # WIERD ERROR INDEED.
+        for value in FileStorage.__objects.values():
+            key = f"{value.__class__.__name__}.{value.id}"
             new_dict[key] = value.to_dict()
 
         with open(FileStorage.__file_path, 'w', encoding='utf-8') as f:
@@ -27,14 +29,16 @@ class FileStorage:
 
     def reload(self):
         from models.base_model import BaseModel
+        to_be_serialized = {}
+
         try:
             with open(FileStorage.__file_path, 'r') as f:
                 collected = json.load(f)
-                for key, value in collected.items():
-                    FileStorage.__objects[key] = BaseModel(value)
-                # FileStorage.__objects = json.load(f)
-                # print(f"FileStorage.__objects = {FileStorage.__objects}")
-                # print(f"type(FileStorage.__objects) = {type(FileStorage.__objects)}")
+            
+            for value in collected.values():
+                key = f"{value['__class__']}.{value['id']}"
+                to_be_serialized[key] = BaseModel(value)
+
+            FileStorage.__objects = to_be_serialized
         except FileNotFoundError:
             pass
-
